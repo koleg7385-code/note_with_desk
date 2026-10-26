@@ -627,22 +627,59 @@ function BoardCanvas({ board, onSelect }: { board: Board; onSelect: (pageId: str
     void updateNode(node.id, { x: Math.round(node.position.x), y: Math.round(node.position.y) })
   }, [])
 
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      const { source, target } = connection
-      // Петля на себя и вторая такая же стрелка — не связь, а мусор на холсте.
-      if (!source || !target || source === target) return
+  /** Единственная точка создания связи: петля на себя и дубль — мусор на холсте, до базы не доходит. */
+  const connectNodes = useCallback(
+    (
+      source: string,
+      target: string,
+      handles: { sourceHandle?: string | null; targetHandle?: string | null } = {},
+    ) => {
+      if (source === target) return
       const duplicate = (edgeRows ?? []).some(
         (edge) => edge.sourceId === source && edge.targetId === target,
       )
       if (duplicate) return
-      void createEdge(board.id, source, target, {
+      void createEdge(board.id, source, target, handles)
+    },
+    [board.id, edgeRows],
+  )
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      if (!connection.source || !connection.target) return
+      connectNodes(connection.source, connection.target, {
         sourceHandle: connection.sourceHandle,
         targetHandle: connection.targetHandle,
       })
     },
-    [board.id, edgeRows],
+    [connectNodes],
   )
+
+  /* ------------------------------------------------------------ связь в два клика */
+
+  /**
+   * У React Flow есть свой режим «связь в два клика» (connectOnClick): первый клик по
+   * точке ждёт второй клик по точке другой карточки. Сами клики обрабатывает React Flow,
+   * мы добавляем только обрамление: подсказку, проявление точек на всех карточках и
+   * отмену по Esc или клику по холсту — без этого режим «прилипает» до второго клика.
+   */
+  const [dragConnecting, setDragConnecting] = useState(false)
+  const [clickConnecting, setClickConnecting] = useState(false)
+
+  const cancelClickConnect = useCallback(() => {
+    // Состояние режима живёт в сторе React Flow — сбрасываем его напрямую.
+    store.setState({ connectionClickStartHandle: null })
+    setClickConnecting(false)
+  }, [store])
+
+  useEffect(() => {
+    if (!clickConnecting) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') cancelClickConnect()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [clickConnecting, cancelClickConnect])
 
   const onNodesDelete = useCallback((deleted: BoardFlowNode[]) => {
     for (const node of deleted) void deleteNode(node.id)
@@ -789,7 +826,15 @@ function BoardCanvas({ board, onSelect }: { board: Board; onSelect: (pageId: str
         </div>
       )}
 
-      <div ref={canvasRef} className="relative min-h-0 flex-1">
+      <div
+        ref={canvasRef}
+        className={cx('relative min-h-0 flex-1', (dragConnecting || clickConnecting) && 'connections-active')}
+      >
+        {clickConnecting && (
+          <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-lg border border-accent/50 bg-raised px-3 py-1.5 text-[12px] text-ink shadow-lg shadow-black/40">
+            Кликните по точке другой карточки, чтобы провести связь · клик по холсту или Esc — отмена
+          </div>
+        )}
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -797,6 +842,11 @@ function BoardCanvas({ board, onSelect }: { board: Board; onSelect: (pageId: str
           onEdgesChange={onEdgesChange}
           onNodeDragStop={onNodeDragStop}
           onConnect={onConnect}
+          onConnectStart={() => setDragConnecting(true)}
+          onConnectEnd={() => setDragConnecting(false)}
+          onClickConnectStart={() => setClickConnecting(true)}
+          onClickConnectEnd={() => setClickConnecting(false)}
+          onPaneClick={cancelClickConnect}
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
           nodeTypes={nodeTypes}
