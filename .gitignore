@@ -1,0 +1,7 @@
+node_modules/
+dist/
+release/
+releases/
+
+# Профиль Chromium и база: у десктопной сборки лежат рядом с приложением
+data/
