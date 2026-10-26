@@ -301,6 +301,68 @@
   border-radius: 999px;
 }
 
+/*
+ * Точки связей: хитбокс (20px) всегда прозрачен и всегда ловит мышь — иначе первый
+ * быстрый клик по краю карточки приходился на панель и связь «не с первого раза».
+ * Невидимость чисто визуальная: точки проявляются при наведении на карточку
+ * и на время протягивания связи (.connections-active на обёртке холста).
+ * Масштабируется только кружок, сам хитбокс не меняется в размерах — иначе клик
+ * по краю карточки то попадает в точку, то нет.
+ * Приёмник (.handle-target) всегда невидим и лежит под точкой выхода: старые связи
+ * продолжают попадать по его id.
+ */
+.react-flow__handle.handle-source,
+.react-flow__handle.handle-target {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.react-flow__node:hover .react-flow__handle,
+.connections-active .react-flow__handle {
+  opacity: 1;
+}
+
+.react-flow__handle.handle-source {
+  z-index: 20;
+}
+
+.react-flow__handle.handle-target {
+  z-index: 10;
+}
+
+.react-flow__handle .handle-dot {
+  pointer-events: none;
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  scale: 0.5;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    scale 150ms ease;
+}
+
+.react-flow__node:hover .handle-dot,
+.connections-active .handle-dot {
+  scale: 1;
+}
+
+.react-flow__handle.handle-source:hover .handle-dot {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* Пока тянут связь, её источник и валидные цели подсвечены акцентом. */
+.react-flow__handle.connectingfrom .handle-dot,
+.react-flow__handle.connectingto .handle-dot,
+.react-flow__handle.valid .handle-dot {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
 /* Выбранную связь подсвечиваем толщиной, а не цветом: свой цвет пользователь не должен терять. */
 .react-flow__edge.selected .react-flow__edge-path,
 .react-flow__edge:focus .react-flow__edge-path {

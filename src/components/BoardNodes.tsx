@@ -27,21 +27,11 @@ export const STICKY_COLOR_ORDER: StickyColor[] = ['yellow', 'green', 'blue', 'pi
 
 /** Прозрачный хитбокс вокруг точки: попасть по связи в разы проще, чем по самому кружку. */
 const hitboxStyle: CSSProperties = {
-  width: 16,
-  height: 16,
+  width: 20,
+  height: 20,
   background: 'transparent',
   border: 'none',
   borderRadius: 999,
-}
-
-const dotClass = 'block h-2.5 w-2.5 rounded-full border border-[#6a6a6a] bg-[#3a3a3a]'
-
-/** Парная точка приёма смещена внутрь узла, чтобы её было видно отдельно от выхода. */
-const INWARD: Record<string, CSSProperties> = {
-  top: { top: 13 },
-  right: { right: 13 },
-  bottom: { bottom: 13 },
-  left: { left: 13 },
 }
 
 /** Просьба сфокусировать только что созданный текстовый узел: id становится известен после вставки. */
@@ -85,31 +75,20 @@ const SIDES = [
 
 /**
  * Точки привязки спрятаны, пока курсор не на карточке: холст должен оставаться чистым.
- * На каждой стороне пара «выход + приём», чтобы стрелку можно было тянуть в любую сторону.
+ * На каждой стороне одна видимая точка, а точно под ней — невидимый приёмник:
+ * старые связи хранят id приёмника, а ConnectionMode.Loose разрешает и тянуть,
+ * и принимать из любой точки. Появление, ховер и подсветка при протягивании —
+ * в index.css (.react-flow__handle), там же класс .connections-active на время связи.
  */
 function Handles() {
   return (
     <>
       {SIDES.map((side) => (
         <Fragment key={side.id}>
-          <Handle
-            id={side.id}
-            type="source"
-            position={side.position}
-            style={hitboxStyle}
-            className="z-10 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 pointer-events-none"
-          >
-            <span className={dotClass} />
+          <Handle id={side.id} type="source" position={side.position} style={hitboxStyle} className="handle-source">
+            <span className="handle-dot" />
           </Handle>
-          <Handle
-            id={side.id}
-            type="target"
-            position={side.position}
-            style={{ ...hitboxStyle, ...INWARD[side.id] }}
-            className="z-10 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 pointer-events-none"
-          >
-            <span className={dotClass} />
-          </Handle>
+          <Handle id={side.id} type="target" position={side.position} style={hitboxStyle} className="handle-target" />
         </Fragment>
       ))}
     </>
